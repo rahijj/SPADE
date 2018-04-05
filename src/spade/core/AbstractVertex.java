@@ -86,10 +86,10 @@ public abstract class AbstractVertex implements Serializable
      */
     public final void addAnnotation(String key, String value)
     {
-        if(StringUtils.isNullOrEmpty(key) || StringUtils.isNullOrEmpty(value))
-        {
-            return;
-        }
+      //  if(StringUtils.isNullOrEmpty(key) || StringUtils.isNullOrEmpty(value))
+      //  {
+      //      return;
+      //  }
         annotations.put(key, value);
     }
 
@@ -104,10 +104,10 @@ public abstract class AbstractVertex implements Serializable
         {
             String key = currentEntry.getKey();
             String value = currentEntry.getValue();
-            if(!(StringUtils.isNullOrEmpty(key) || StringUtils.isNullOrEmpty(value)))
-            {
+//            if(!(StringUtils.isNullOrEmpty(key) || StringUtils.isNullOrEmpty(value)))
+  //          {
                 addAnnotation(key, value);
-            }
+    //        }
         }
     }
 

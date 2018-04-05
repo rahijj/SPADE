@@ -21,6 +21,7 @@ public class GetVertex extends Neo4j<Set<AbstractVertex>, Map<String, List<Strin
         try
         {
             String queryString = prepareGetVertexQuery(parameters, limit);
+		Logger.getLogger(GetVertex.class.getName()).log(Level.INFO, "queryString: " + queryString);
             vertexSet = prepareVertexSetFromNeo4jResult(queryString);
             if (!CollectionUtils.isEmpty(vertexSet))
                 return vertexSet;
