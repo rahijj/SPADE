@@ -22,6 +22,8 @@ package spade.reporter.audit.artifact;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
@@ -29,7 +31,6 @@ import org.apache.commons.lang.StringUtils;
 import spade.core.Settings;
 import spade.edge.opm.WasDerivedFrom;
 import spade.reporter.Audit;
-//import spade.reporter.Audit;
 import spade.reporter.audit.Globals;
 import spade.reporter.audit.OPMConstants;
 import spade.utility.CommonFunctions;
@@ -40,14 +41,81 @@ import spade.vertex.opm.Artifact;
 
 public class ArtifactManager{
 
+	private static final Logger logger = Logger.getLogger(ArtifactManager.class.getName());
+	
+	private static final String 
+			CONFIG_KEY_PARENT_DIR = "parentdir",
+			
+//			CONFIG_KEY_PERSISTENT_SUB_DIR = "persistentsubdir",
+			CONFIG_KEY_PERSISTENT_DB_NAME = "persistentdbname",
+			CONFIG_KEY_PERSISTENT_CACHE_SIZE = "persistentcachesize",
+			CONFIG_KEY_PERSISTENT_BF_FP_PROB = "persistentbffpp",
+			CONFIG_KEY_PERSISTENT_BF_EXPECTED_ELEMENTS = "persistentbfexpectedelements",
+			CONFIG_KEY_PERSISTENT_REPORTING_INTERVAL_SECONDS = "persistentreportinginterval",
+			
+//			CONFIG_KEY_TRANSIENT_SUB_DIR_PREFIX = "transientsubdirprefix",
+			CONFIG_KEY_TRANSIENT_DB_NAME_PREFIX = "transientdbnameprefix",
+			CONFIG_KEY_TRANSIENT_CACHE_SIZE = "transientcachesize",
+			CONFIG_KEY_TRANSIENT_BF_FP_PROB = "transientbffpp",
+			CONFIG_KEY_TRANSIENT_BF_EXPECTED_ELEMENTS = "transientbfexpectedelements",
+			CONFIG_KEY_TRANSIENT_REPORTING_INTERVAL_SECONDS = "transientreportinginterval";
+	
+	private static final String[] mandatoryConfigKeys = {CONFIG_KEY_PARENT_DIR, //CONFIG_KEY_PERSISTENT_SUB_DIR, 
+			CONFIG_KEY_PERSISTENT_DB_NAME, CONFIG_KEY_PERSISTENT_CACHE_SIZE, CONFIG_KEY_PERSISTENT_BF_FP_PROB,
+			CONFIG_KEY_PERSISTENT_BF_EXPECTED_ELEMENTS, CONFIG_KEY_PERSISTENT_BF_EXPECTED_ELEMENTS,
+			CONFIG_KEY_PERSISTENT_REPORTING_INTERVAL_SECONDS, //CONFIG_KEY_TRANSIENT_SUB_DIR_PREFIX, 
+			CONFIG_KEY_TRANSIENT_DB_NAME_PREFIX, CONFIG_KEY_TRANSIENT_CACHE_SIZE, CONFIG_KEY_TRANSIENT_BF_FP_PROB,
+			CONFIG_KEY_TRANSIENT_BF_EXPECTED_ELEMENTS, CONFIG_KEY_TRANSIENT_REPORTING_INTERVAL_SECONDS};
+	
+	private String configParentDir, 
+	
+			//configPersistentSubDir, 
+			configPersistentDbName, configPersistentCacheSize,
+			configPersistentBloomfilterFalsePositiveProb, configPersistentBloomfilterExpectedElements,
+			configPersistentReportingIntervalSeconds,
+			
+			//configTransientSubDirPrefix, 
+			configTransientDbNamePrefix, configTransientCacheSize, 
+			configTransientBloomfilterFalsePositiveProb, configTransientBloomfilterExpectedElements,
+			configTransientReportingIntervalSeconds;
+	
+	private final Hasher<ArtifactIdentifier> artifactIdentifierHasher = new Hasher<ArtifactIdentifier>(){
+		@Override
+		public String getHash(ArtifactIdentifier t){
+			if(t != null){
+				Map<String, String> annotations = t.getAnnotationsMap();
+				String subtype = t.getSubtype();
+				String stringToHash = String.valueOf(annotations) + "," + String.valueOf(subtype);
+				return DigestUtils.sha256Hex(stringToHash);
+			}else{
+				return DigestUtils.sha256Hex("(null)");
+			}
+		}
+	};
+	
 	private final Audit reporter;
 	
 	private final Map<Class<? extends ArtifactIdentifier>, ArtifactConfig> artifactConfigs;
 	
-	private final String artifactsMapId = "Audit[ArtifactsMap]";
-	private ExternalMemoryMap<ArtifactIdentifier, ArtifactState> artifactsMap;
+	private final String getTransientArtifactsMapId(String processId){
+		return "Audit[TransientArtifactsMap("+processId+")]";
+	}
 	
-	public ArtifactManager(Audit reporter, Globals globals) throws Exception{
+	private final String getTransientArtifactsMapDbName(String processId){
+		return configTransientDbNamePrefix + processId;
+	}
+	
+	private final String getTransientArtifactsMapSubDirPath(String processId){
+		return configParentDir;// + File.separator + configTransientSubDirPrefix + processId;
+	}
+	
+	private final String persistentArtifactsMapId = "Audit[PersistentArtifactsMap]";
+	private ExternalMemoryMap<ArtifactIdentifier, ArtifactState> persistentArtifactsMap;
+	
+	private Map<String, ExternalMemoryMap<ArtifactIdentifier, ArtifactState>> transientArtifactsMaps = 
+			new HashMap<String, ExternalMemoryMap<ArtifactIdentifier, ArtifactState>>();
+	
+	public ArtifactManager(Audit reporter, Globals globals) throws Throwable{
 		if(reporter == null){
 			throw new IllegalArgumentException("NULL Audit reporter");
 		}
@@ -55,32 +123,74 @@ public class ArtifactManager{
 			throw new IllegalArgumentException("NULL Globals object");
 		}
 		this.reporter = reporter;
-		if(globals.keepingArtifactPropertiesMap){
-			String configFilePath = Settings.getDefaultConfigFilePath(this.getClass());
-			Map<String, String> configMap = FileUtility.readConfigFileAsKeyValueMap(
-					configFilePath, "=");
-			artifactsMap = CommonFunctions.createExternalMemoryMapInstance(artifactsMapId, 
-					configMap.get("cacheSize"), configMap.get("bloomfilterFalsePositiveProbability"), 
-					configMap.get("bloomFilterExpectedNumberOfElements"), configMap.get("tempDir"),
-					configMap.get("dbName"), configMap.get("reportingIntervalSeconds"), 
-					new Hasher<ArtifactIdentifier>(){
-						@Override
-						public String getHash(ArtifactIdentifier t){
-							if(t != null){
-								Map<String, String> annotations = t.getAnnotationsMap();
-								String subtype = t.getSubtype();
-								String stringToHash = String.valueOf(annotations) + "," + String.valueOf(subtype);
-								return DigestUtils.sha256Hex(stringToHash);
-							}else{
-								return DigestUtils.sha256Hex("(null)");
-							}
-						}
-					}
-			);
-		}else{
-			artifactsMap = null;
-		}
 		artifactConfigs = getArtifactConfig(globals);
+		if(globals.keepingArtifactPropertiesMap){
+			initConfigFromDefaultConfigFile();
+			validateTransientArtifactsMapProperties();
+			initPeristentArtifactsMap();
+		}else{
+			persistentArtifactsMap = null;
+		}
+	}
+	
+	private boolean validateTransientArtifactsMapProperties() throws Exception{
+		String transientId = "ArgsTest";
+		// Never returns false. Either exception or true.
+		return CommonFunctions.validateExternalMemoryArguments(getTransientArtifactsMapId(transientId), 
+				configTransientCacheSize, configTransientBloomfilterFalsePositiveProb, 
+				configTransientBloomfilterExpectedElements, 
+				getTransientArtifactsMapSubDirPath(transientId), getTransientArtifactsMapDbName(transientId), 
+				configTransientReportingIntervalSeconds);
+	}
+	
+	private void initPeristentArtifactsMap() throws Exception{
+		String dirPath = configParentDir;// + File.separator + configPersistentSubDir;
+		persistentArtifactsMap = CommonFunctions.createExternalMemoryMapInstance(persistentArtifactsMapId, 
+				configPersistentCacheSize, configPersistentBloomfilterFalsePositiveProb, 
+				configPersistentBloomfilterExpectedElements, dirPath,
+				configPersistentDbName, configPersistentReportingIntervalSeconds, 
+				artifactIdentifierHasher
+		);
+	}
+	
+	private ExternalMemoryMap<ArtifactIdentifier, ArtifactState> initTransientArtifactsMap(String processId) throws Exception{
+		String mapId = getTransientArtifactsMapId(processId);
+		String dbName = getTransientArtifactsMapDbName(processId);
+		String dirPath = getTransientArtifactsMapSubDirPath(processId);
+		return CommonFunctions.createExternalMemoryMapInstance(mapId, 
+				configTransientCacheSize, configTransientBloomfilterFalsePositiveProb, 
+				configTransientBloomfilterExpectedElements, dirPath,
+				dbName, configTransientReportingIntervalSeconds, 
+				artifactIdentifierHasher
+		);
+	}
+	
+	private void initConfigFromDefaultConfigFile() throws Exception{
+		String filePath = Settings.getDefaultConfigFilePath(this.getClass());
+		Map<String, String> configMap = FileUtility.readConfigFileAsKeyValueMap(filePath, "=");
+		for(String configKey : mandatoryConfigKeys){
+			if(configMap.get(configKey) == null){
+				throw new Exception("Missing key '"+configKey+"' in default config file");
+			}
+		}
+		
+		// All keys found
+		configParentDir = configMap.get(CONFIG_KEY_PARENT_DIR);
+		
+		//configPersistentSubDir = configMap.get(CONFIG_KEY_PERSISTENT_SUB_DIR);
+		configPersistentDbName = configMap.get(CONFIG_KEY_PERSISTENT_DB_NAME);
+		configPersistentCacheSize = configMap.get(CONFIG_KEY_PERSISTENT_CACHE_SIZE);
+		configPersistentBloomfilterFalsePositiveProb = configMap.get(CONFIG_KEY_PERSISTENT_BF_FP_PROB);
+		configPersistentBloomfilterExpectedElements = configMap.get(CONFIG_KEY_PERSISTENT_BF_EXPECTED_ELEMENTS);
+		configPersistentReportingIntervalSeconds = configMap.get(CONFIG_KEY_PERSISTENT_REPORTING_INTERVAL_SECONDS);
+		
+		//configTransientSubDirPrefix = configMap.get(CONFIG_KEY_TRANSIENT_SUB_DIR_PREFIX);
+		configTransientDbNamePrefix = configMap.get(CONFIG_KEY_TRANSIENT_DB_NAME_PREFIX);
+		configTransientCacheSize = configMap.get(CONFIG_KEY_TRANSIENT_CACHE_SIZE);
+		configTransientBloomfilterFalsePositiveProb = configMap.get(CONFIG_KEY_TRANSIENT_BF_FP_PROB);
+		configTransientBloomfilterExpectedElements = configMap.get(CONFIG_KEY_TRANSIENT_BF_EXPECTED_ELEMENTS);
+		configTransientReportingIntervalSeconds = configMap.get(CONFIG_KEY_TRANSIENT_REPORTING_INTERVAL_SECONDS);
+		
 	}
 	
 	private Map<Class<? extends ArtifactIdentifier>, ArtifactConfig> getArtifactConfig(Globals globals){
@@ -97,8 +207,6 @@ public class ArtifactManager{
 						true, globals.versionFiles, true));
 		map.put(LinkIdentifier.class, 
 				new ArtifactConfig(true, globals.epochs, globals.versions, globals.permissions, true, true, true));
-		map.put(MemoryIdentifier.class, 
-				new ArtifactConfig(true, false, globals.versions, false, false, globals.versionMemorys, false));
 		map.put(NamedPipeIdentifier.class, 
 				new ArtifactConfig(true, globals.epochs, globals.versions, globals.permissions, 
 						true, globals.versionNamedPipes, true));
@@ -108,16 +216,17 @@ public class ArtifactManager{
 		map.put(UnixSocketIdentifier.class, 
 				new ArtifactConfig(globals.unixSockets, globals.epochs, globals.versions, globals.permissions, 
 						true, globals.versionUnixSockets, true));
-		map.put(UnknownIdentifier.class, 
-				new ArtifactConfig(true, globals.epochs, globals.versions, false, 
+
+		// Transient ones below
+		map.put(MemoryIdentifier.class, new ArtifactConfig(true, false, globals.versions, false, false, 
+				globals.versionMemorys, false));
+		map.put(UnknownIdentifier.class, new ArtifactConfig(true, globals.epochs, globals.versions, false, 
 						true, globals.versionUnknowns, false));
 		map.put(UnnamedNetworkSocketPairIdentifier.class, 
 				new ArtifactConfig(true, globals.epochs, globals.versions, false, true, true, false));
-		map.put(UnnamedPipeIdentifier.class, 
-				new ArtifactConfig(true, globals.epochs, globals.versions, false, 
+		map.put(UnnamedPipeIdentifier.class, new ArtifactConfig(true, globals.epochs, globals.versions, false, 
 						true, globals.versionUnnamedPipes, false));
-		map.put(UnnamedUnixSocketPairIdentifier.class, 
-				new ArtifactConfig(true, globals.epochs, globals.versions, false, 
+		map.put(UnnamedUnixSocketPairIdentifier.class, new ArtifactConfig(true, globals.epochs, globals.versions, false, 
 						true, globals.versionUnnamedUnixSocketPairs, false));
 		return map;
 	}
@@ -157,11 +266,33 @@ public class ArtifactManager{
 	private boolean isPermissionsUpdatable(ArtifactIdentifier identifier){
 		return artifactConfigs.get(identifier.getClass()).canBePermissioned;
 	}
+	
+	private ExternalMemoryMap<ArtifactIdentifier, ArtifactState> getResolvedArtifactMap(ArtifactIdentifier identifier){
+		if(identifier instanceof TransientArtifactIdentifier){
+			TransientArtifactIdentifier transientIdentifier = (TransientArtifactIdentifier)(identifier);
+			String processId = transientIdentifier.getGroupId();
+			ExternalMemoryMap<ArtifactIdentifier, ArtifactState> transientMap = transientArtifactsMaps.get(processId);
+			if(transientMap == null){
+				try{
+					transientMap = initTransientArtifactsMap(processId);
+					transientArtifactsMaps.put(processId, transientMap);
+				}catch(Throwable t){
+					logger.log(Level.SEVERE, "Failed to init transient map for processId: " + processId + 
+							". Using the persistent one. Garbage collection will fail for this process.", t);
+					return persistentArtifactsMap; // As a backup
+				}
+			}
+			return transientMap;
+		}else{
+			return persistentArtifactsMap;
+		}
+	}
 
 	public void artifactCreated(ArtifactIdentifier identifier){
 		boolean incrementEpoch = outputArtifact(identifier) && hasEpoch(identifier) 
 				&& isEpochUpdatable(identifier);
 		if(incrementEpoch){
+			ExternalMemoryMap<ArtifactIdentifier, ArtifactState> artifactsMap = getResolvedArtifactMap(identifier);
 			if(artifactsMap != null){
 				boolean update = false;
 				ArtifactState state = artifactsMap.get(identifier);
@@ -183,6 +314,7 @@ public class ArtifactManager{
 		boolean incrementVersion = outputArtifact(identifier) && hasVersion(identifier) 
 				&& isVersionUpdatable(identifier);
 		if(incrementVersion){
+			ExternalMemoryMap<ArtifactIdentifier, ArtifactState> artifactsMap = getResolvedArtifactMap(identifier); 
 			if(artifactsMap != null){
 				boolean update = false;
 				ArtifactState state = artifactsMap.get(identifier);
@@ -204,6 +336,7 @@ public class ArtifactManager{
 		boolean updatePermissions = outputArtifact(identifier) && hasPermissions(identifier)
 				&& isPermissionsUpdatable(identifier);
 		if(updatePermissions){
+			ExternalMemoryMap<ArtifactIdentifier, ArtifactState> artifactsMap = getResolvedArtifactMap(identifier); 
 			if(artifactsMap != null){
 				ArtifactState state = artifactsMap.get(identifier);
 				if(state == null){
@@ -220,6 +353,7 @@ public class ArtifactManager{
 		BigInteger epoch = null, version = null;
 		String permissions = null;
 		if(outputArtifact(identifier)){
+			ExternalMemoryMap<ArtifactIdentifier, ArtifactState> artifactsMap = getResolvedArtifactMap(identifier);
 			if(artifactsMap != null){
 				ArtifactState state = artifactsMap.get(identifier);
 				if(state == null){
@@ -311,10 +445,31 @@ public class ArtifactManager{
 		addSourceAnnotation(artifact.getAnnotations(), source);;
 	}
 	
+	public void doCleanUpForPid(String processId){
+		if(transientArtifactsMaps != null){
+			ExternalMemoryMap<ArtifactIdentifier, ArtifactState> map = transientArtifactsMaps.remove(processId);
+			if(map != null){
+				String mapId = getTransientArtifactsMapId(processId);
+				CommonFunctions.closePrintSizeAndDeleteExternalMemoryMap(mapId, map);
+			}
+		}
+	}
+	
 	public void doCleanUp(){
-		if(artifactsMap != null){
-			CommonFunctions.closePrintSizeAndDeleteExternalMemoryMap(artifactsMapId, artifactsMap);
-			artifactsMap = null;
+		if(persistentArtifactsMap != null){
+			CommonFunctions.closePrintSizeAndDeleteExternalMemoryMap(persistentArtifactsMapId, persistentArtifactsMap);
+			persistentArtifactsMap = null;
+		}
+		if(transientArtifactsMaps != null){
+			for(Map.Entry<String, ExternalMemoryMap<ArtifactIdentifier, ArtifactState>> entry : transientArtifactsMaps.entrySet()){
+				if(entry != null){
+					String processId = entry.getKey();
+					String transientMapId = getTransientArtifactsMapId(processId);
+					ExternalMemoryMap<ArtifactIdentifier, ArtifactState> transientMap = entry.getValue();
+					CommonFunctions.closePrintSizeAndDeleteExternalMemoryMap(transientMapId, transientMap);
+				}
+			}
+			transientArtifactsMaps.clear();
 		}
 	}
 }

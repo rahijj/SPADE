@@ -30,16 +30,20 @@ public class UnnamedNetworkSocketPairIdentifier extends FdPairIdentifier{
 	
 	public final String protocol;
 	
-	public UnnamedNetworkSocketPairIdentifier(String tgid, String fd0, String fd1, String protocol){
-		super(tgid, fd0, fd1);
+	public UnnamedNetworkSocketPairIdentifier(String tgid, String tgidTime, String fd0, String fd1, String protocol){
+		super(tgid, tgidTime, fd0, fd1);
 		this.protocol = protocol;
 	}
 
 	@Override
+	public String getFd0Key(){ return OPMConstants.ARTIFACT_FD0; }
+	
+	@Override
+	public String getFd1Key(){ return OPMConstants.ARTIFACT_FD1; }
+	
+	@Override
 	public Map<String, String> getAnnotationsMap(){
 		Map<String, String> map = super.getAnnotationsMap();
-		map.put(OPMConstants.ARTIFACT_FD0, String.valueOf(fd0));
-		map.put(OPMConstants.ARTIFACT_FD1, String.valueOf(fd1));
 		map.put(OPMConstants.ARTIFACT_PROTOCOL, String.valueOf(protocol));
 		return map;
 	}
@@ -50,7 +54,7 @@ public class UnnamedNetworkSocketPairIdentifier extends FdPairIdentifier{
 	}
 
 	@Override
-	public int hashCode() {
+	public int hashCode(){
 		final int prime = 31;
 		int result = super.hashCode();
 		result = prime * result + ((protocol == null) ? 0 : protocol.hashCode());
@@ -58,25 +62,26 @@ public class UnnamedNetworkSocketPairIdentifier extends FdPairIdentifier{
 	}
 
 	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
+	public boolean equals(Object obj){
+		if(this == obj)
 			return true;
-		if (!super.equals(obj))
+		if(!super.equals(obj))
 			return false;
-		if (getClass() != obj.getClass())
+		if(getClass() != obj.getClass())
 			return false;
-		UnnamedNetworkSocketPairIdentifier other = (UnnamedNetworkSocketPairIdentifier) obj;
-		if (protocol == null) {
-			if (other.protocol != null)
+		UnnamedNetworkSocketPairIdentifier other = (UnnamedNetworkSocketPairIdentifier)obj;
+		if(protocol == null){
+			if(other.protocol != null)
 				return false;
-		} else if (!protocol.equals(other.protocol))
+		}else if(!protocol.equals(other.protocol))
 			return false;
 		return true;
 	}
 
 	@Override
-	public String toString() {
-		return "UnnamedNetworkSocketPairIdentifier [protocol=" + protocol + ", tgid=" + tgid + ", fd0=" + fd0 + ", fd1="
-				+ fd1 + "]";
+	public String toString(){
+		return "UnnamedNetworkSocketPairIdentifier [protocol=" + protocol + ", fd0=" + fd0 + ", fd1=" + fd1
+				+ ", tgid=" + getGroupId() + ", tgidTime=" + getGroupTime() + "]";
 	}
+
 }

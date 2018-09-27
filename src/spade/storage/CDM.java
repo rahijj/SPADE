@@ -635,6 +635,7 @@ public class CDM extends Kafka {
 						Map<CharSequence, CharSequence> properties = new HashMap<CharSequence, CharSequence>();
 						addIfNotNull(OPMConstants.ARTIFACT_VERSION, vertex.getAnnotations(), properties);
 						addIfNotNull(OPMConstants.ARTIFACT_TGID, vertex.getAnnotations(), properties);
+						addIfNotNull(OPMConstants.ARTIFACT_TIME, vertex.getAnnotations(), properties);
 
 						AbstractObject baseObject = new AbstractObject(null, epoch, properties);
 
@@ -662,6 +663,7 @@ public class CDM extends Kafka {
 						Map<CharSequence, CharSequence> properties = new HashMap<>();
 						addIfNotNull(OPMConstants.ARTIFACT_VERSION, vertex.getAnnotations(), properties);
 						addIfNotNull(OPMConstants.ARTIFACT_TGID, vertex.getAnnotations(), OPMConstants.ARTIFACT_PID, properties);
+						addIfNotNull(OPMConstants.ARTIFACT_TIME, vertex.getAnnotations(), properties);
 
 						AbstractObject baseObject = new AbstractObject(null, epoch, properties);
 
@@ -686,6 +688,7 @@ public class CDM extends Kafka {
 						properties.put(OPMConstants.ARTIFACT_PID, String.valueOf(tgid));
 						properties.put(OPMConstants.ARTIFACT_SUBTYPE, artifactType);
 						addIfNotNull(OPMConstants.ARTIFACT_VERSION, vertex.getAnnotations(), properties);
+						addIfNotNull(OPMConstants.ARTIFACT_TIME, vertex.getAnnotations(), properties);
 						
 						AbstractObject baseObject = new AbstractObject(null, epoch, properties);
 
@@ -703,7 +706,8 @@ public class CDM extends Kafka {
 
 						Map<CharSequence, CharSequence> properties = new HashMap<CharSequence, CharSequence>();
 						properties.put(OPMConstants.ARTIFACT_PID, String.valueOf(tgid));
-						addIfNotNull(OPMConstants.ARTIFACT_VERSION, vertex.getAnnotations(), properties);	                    		
+						addIfNotNull(OPMConstants.ARTIFACT_VERSION, vertex.getAnnotations(), properties);
+						addIfNotNull(OPMConstants.ARTIFACT_TIME, vertex.getAnnotations(), properties);
 
 						AbstractObject baseObject = new AbstractObject(null, epoch, properties);
 

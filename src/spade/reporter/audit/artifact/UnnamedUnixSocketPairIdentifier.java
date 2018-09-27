@@ -20,34 +20,28 @@
 
 package spade.reporter.audit.artifact;
 
-import java.util.Map;
-
 import spade.reporter.audit.OPMConstants;
 
 public class UnnamedUnixSocketPairIdentifier extends FdPairIdentifier{
 
 	private static final long serialVersionUID = 9009374043657988074L;
 
-	public UnnamedUnixSocketPairIdentifier(String tgid, String fd0, String fd1){
-		super(tgid, fd0, fd1);
+	public UnnamedUnixSocketPairIdentifier(String tgid, String tgidTime, String fd0, String fd1){
+		super(tgid, tgidTime, fd0, fd1);
 	}
 	
 	@Override
-	public Map<String, String> getAnnotationsMap(){
-		Map<String, String> map = super.getAnnotationsMap();
-		map.put(OPMConstants.ARTIFACT_FD0, String.valueOf(fd0));
-		map.put(OPMConstants.ARTIFACT_FD1, String.valueOf(fd1));
-		return map;
-	}
-
-	@Override
-	public String getSubtype() {
-		return OPMConstants.SUBTYPE_UNNAMED_UNIX_SOCKET_PAIR;
-	}
+	public String getFd0Key(){ return OPMConstants.ARTIFACT_FD0; }
 	
 	@Override
-	public String toString() {
-		return "UnnamedUnixSocketPairIdentifier [tgid=" + tgid + ", fd0=" + fd0 + ", fd1=" + fd1 + "]";
-	}
+	public String getFd1Key(){ return OPMConstants.ARTIFACT_FD1; }
+	
+	@Override
+	public String getSubtype() { return OPMConstants.SUBTYPE_UNNAMED_UNIX_SOCKET_PAIR; }
 
+	@Override
+	public String toString(){
+		return "UnnamedUnixSocketPairIdentifier [fd0=" + fd0 + ", fd1=" + fd1 + ", tgid=" + getGroupId()
+				+ ", tgidTime=" + getGroupTime() + "]";
+	}
 }

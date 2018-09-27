@@ -20,8 +20,6 @@
 
 package spade.reporter.audit.artifact;
 
-import java.util.Map;
-
 import spade.reporter.audit.OPMConstants;
 
 public class UnnamedPipeIdentifier extends FdPairIdentifier{
@@ -30,27 +28,26 @@ public class UnnamedPipeIdentifier extends FdPairIdentifier{
 	
 	/**
 	 * @param tgid owner process's thread group id
+	 * @param tgidTime process's thread group start or seen time
 	 * @param fd0 read end of the pipe
 	 * @param fd1 write end of the pipe
 	 */
-	public UnnamedPipeIdentifier(String tgid, String fd0, String fd1){
-		super(tgid, fd0, fd1);
+	public UnnamedPipeIdentifier(String tgid, String tgidTime, String fd0, String fd1){
+		super(tgid, tgidTime, fd0, fd1);
 	}
 
-	public String getSubtype(){
-		return OPMConstants.SUBTYPE_UNNAMED_PIPE;
-	}
+	@Override
+	public String getSubtype(){ return OPMConstants.SUBTYPE_UNNAMED_PIPE; }
 	
 	@Override
-	public Map<String, String> getAnnotationsMap() {
-		Map<String, String> annotations = super.getAnnotationsMap();
-		annotations.put(OPMConstants.ARTIFACT_READ_FD, String.valueOf(fd0));
-		annotations.put(OPMConstants.ARTIFACT_WRITE_FD, String.valueOf(fd1));
-		return annotations;
-	}
+	public String getFd0Key(){ return OPMConstants.ARTIFACT_READ_FD; }
+	
+	@Override
+	public String getFd1Key(){ return OPMConstants.ARTIFACT_WRITE_FD; }
 
 	@Override
-	public String toString() {
-		return "UnnamedPipeIdentifier [fd0=" + fd0 + ", fd1=" + fd1 + ", tgid=" + tgid + "]";
+	public String toString(){
+		return "UnnamedPipeIdentifier [fd0=" + fd0 + ", fd1=" + fd1 + ", tgid=" + getGroupId()
+				+ ", tgidTime=" + getGroupTime() + "]";
 	}
 }

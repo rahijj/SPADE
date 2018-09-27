@@ -20,28 +20,35 @@
 
 package spade.reporter.audit.artifact;
 
+import java.util.HashMap;
 import java.util.Map;
 
-public abstract class FdPairIdentifier extends TransientArtifactIdentifier {
+import spade.reporter.audit.OPMConstants;
 
-	private static final long serialVersionUID = -4930748608565367219L;
+public abstract class TransientArtifactIdentifier extends ArtifactIdentifier{
+
+	private static final long serialVersionUID = -4218714322311264614L;
+
+	private String groupId, groupTime;
 	
-	public final String fd0, fd1;
-	
-	public FdPairIdentifier(String tgid, String processTime, String fd0, String fd1){
-		super(tgid, processTime);
-		this.fd0 = fd0;
-		this.fd1 = fd1;
+	public TransientArtifactIdentifier(String groupId, String groupTime){
+		this.groupId = groupId;
+		this.groupTime = groupTime;
+	}
+
+	public String getGroupId(){
+		return groupId;
 	}
 	
-	protected abstract String getFd0Key();
-	protected abstract String getFd1Key();
+	public String getGroupTime(){
+		return groupTime;
+	}
 	
 	@Override
-	public Map<String, String> getAnnotationsMap(){ // FDs to be added by child classes
-		Map<String, String> map = super.getAnnotationsMap();
-		map.put(getFd0Key(), String.valueOf(fd0));
-		map.put(getFd1Key(), String.valueOf(fd1));
+	public Map<String, String> getAnnotationsMap(){
+		Map<String, String> map = new HashMap<String, String>();
+		map.put(OPMConstants.ARTIFACT_TGID, groupId);
+		map.put(OPMConstants.ARTIFACT_TIME, groupTime);
 		return map;
 	}
 
@@ -49,8 +56,8 @@ public abstract class FdPairIdentifier extends TransientArtifactIdentifier {
 	public int hashCode(){
 		final int prime = 31;
 		int result = super.hashCode();
-		result = prime * result + ((fd0 == null) ? 0 : fd0.hashCode());
-		result = prime * result + ((fd1 == null) ? 0 : fd1.hashCode());
+		result = prime * result + ((groupId == null) ? 0 : groupId.hashCode());
+		result = prime * result + ((groupTime == null) ? 0 : groupTime.hashCode());
 		return result;
 	}
 
@@ -62,19 +69,18 @@ public abstract class FdPairIdentifier extends TransientArtifactIdentifier {
 			return false;
 		if(getClass() != obj.getClass())
 			return false;
-		FdPairIdentifier other = (FdPairIdentifier)obj;
-		if(fd0 == null){
-			if(other.fd0 != null)
+		TransientArtifactIdentifier other = (TransientArtifactIdentifier)obj;
+		if(groupId == null){
+			if(other.groupId != null)
 				return false;
-		}else if(!fd0.equals(other.fd0))
+		}else if(!groupId.equals(other.groupId))
 			return false;
-		if(fd1 == null){
-			if(other.fd1 != null)
+		if(groupTime == null){
+			if(other.groupTime != null)
 				return false;
-		}else if(!fd1.equals(other.fd1))
+		}else if(!groupTime.equals(other.groupTime))
 			return false;
 		return true;
 	}
 
-	public abstract String toString();
 }

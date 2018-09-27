@@ -20,22 +20,20 @@
 
 package spade.reporter.audit.artifact;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import spade.reporter.audit.OPMConstants;
 
-public class MemoryIdentifier extends ArtifactIdentifier{
+public class MemoryIdentifier extends TransientArtifactIdentifier{
 	
 	private static final long serialVersionUID = -4838164396726143615L;
 	private String memoryAddress;
 	private String size;
-	private String tgid;
 	
-	public MemoryIdentifier(String tgid, String memoryAddress, String size){
+	public MemoryIdentifier(String tgid, String tgidTime, String memoryAddress, String size){
+		super(tgid, tgidTime);
 		this.memoryAddress = memoryAddress;
 		this.size = size;
-		this.tgid = tgid;
 	}
 	
 	public String getMemoryAddress(){
@@ -45,17 +43,12 @@ public class MemoryIdentifier extends ArtifactIdentifier{
 	public String getSize(){
 		return size;
 	}
-	
-	public String getTgid(){
-		return tgid;
-	}
 
 	@Override
 	public Map<String, String> getAnnotationsMap() {
-		Map<String, String> annotations = new HashMap<String, String>();
+		Map<String, String> annotations = super.getAnnotationsMap();
 		annotations.put(OPMConstants.ARTIFACT_MEMORY_ADDRESS, memoryAddress);
 		annotations.put(OPMConstants.ARTIFACT_SIZE, size);
-		annotations.put(OPMConstants.ARTIFACT_TGID, tgid);
 		return annotations;
 	}
 	
@@ -64,45 +57,39 @@ public class MemoryIdentifier extends ArtifactIdentifier{
 	}
 
 	@Override
-	public int hashCode() {
+	public int hashCode(){
 		final int prime = 31;
-		int result = 1;
+		int result = super.hashCode();
 		result = prime * result + ((memoryAddress == null) ? 0 : memoryAddress.hashCode());
-		result = prime * result + ((tgid == null) ? 0 : tgid.hashCode());
 		result = prime * result + ((size == null) ? 0 : size.hashCode());
 		return result;
 	}
 
 	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
+	public boolean equals(Object obj){
+		if(this == obj)
 			return true;
-		if (obj == null)
+		if(!super.equals(obj))
 			return false;
-		if (getClass() != obj.getClass())
+		if(getClass() != obj.getClass())
 			return false;
-		MemoryIdentifier other = (MemoryIdentifier) obj;
-		if (memoryAddress == null) {
-			if (other.memoryAddress != null)
+		MemoryIdentifier other = (MemoryIdentifier)obj;
+		if(memoryAddress == null){
+			if(other.memoryAddress != null)
 				return false;
-		} else if (!memoryAddress.equals(other.memoryAddress))
+		}else if(!memoryAddress.equals(other.memoryAddress))
 			return false;
-		if (tgid == null) {
-			if (other.tgid != null)
+		if(size == null){
+			if(other.size != null)
 				return false;
-		} else if (!tgid.equals(other.tgid))
-			return false;
-		if (size == null) {
-			if (other.size != null)
-				return false;
-		} else if (!size.equals(other.size))
+		}else if(!size.equals(other.size))
 			return false;
 		return true;
 	}
 
 	@Override
-	public String toString() {
-		return "MemoryIdentifier [memoryAddress=" + memoryAddress + ", size=" + size + ", tgid=" + tgid + "]";
+	public String toString(){
+		return "MemoryIdentifier [memoryAddress=" + memoryAddress + ", size=" + size + ", tgid="
+				+ getGroupId() + ", tgidTime=" + getGroupTime() + "]";
 	}
-
 }

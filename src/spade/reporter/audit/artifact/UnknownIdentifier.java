@@ -20,33 +20,27 @@
 
 package spade.reporter.audit.artifact;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import spade.reporter.audit.OPMConstants;
 
-public class UnknownIdentifier extends ArtifactIdentifier{
+public class UnknownIdentifier extends TransientArtifactIdentifier{
 
 	private static final long serialVersionUID = 6511655756054136851L;
-	private String tgid, fd;
+	private String fd;
 	
-	public UnknownIdentifier(String tgid, String fd){
-		this.tgid = tgid;
+	public UnknownIdentifier(String tgid, String tgidTime, String fd){
+		super(tgid, tgidTime);
 		this.fd = fd;
 	}
 	
 	public String getFD(){
 		return fd;
 	}
-
-	public String getTgid(){
-		return tgid;
-	}
 	
 	@Override
 	public Map<String, String> getAnnotationsMap() {
-		Map<String, String> annotations = new HashMap<String, String>();
-		annotations.put(OPMConstants.ARTIFACT_TGID, tgid);
+		Map<String, String> annotations = super.getAnnotationsMap();
 		annotations.put(OPMConstants.ARTIFACT_FD, fd);
 		return annotations;
 	}
@@ -54,40 +48,36 @@ public class UnknownIdentifier extends ArtifactIdentifier{
 	public String getSubtype(){
 		return OPMConstants.SUBTYPE_UNKNOWN;
 	}
-	
+
 	@Override
 	public int hashCode(){
 		final int prime = 31;
-		int result = 1;
+		int result = super.hashCode();
 		result = prime * result + ((fd == null) ? 0 : fd.hashCode());
-		result = prime * result + ((tgid == null) ? 0 : tgid.hashCode());
 		return result;
 	}
 
 	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
+	public boolean equals(Object obj){
+		if(this == obj)
 			return true;
-		if (obj == null)
+		if(!super.equals(obj))
 			return false;
-		if (getClass() != obj.getClass())
+		if(getClass() != obj.getClass())
 			return false;
-		UnknownIdentifier other = (UnknownIdentifier) obj;
-		if (fd == null) {
-			if (other.fd != null)
+		UnknownIdentifier other = (UnknownIdentifier)obj;
+		if(fd == null){
+			if(other.fd != null)
 				return false;
-		} else if (!fd.equals(other.fd))
-			return false;
-		if (tgid == null) {
-			if (other.tgid != null)
-				return false;
-		} else if (!tgid.equals(other.tgid))
+		}else if(!fd.equals(other.fd))
 			return false;
 		return true;
 	}
 
 	@Override
-	public String toString() {
-		return "UnknownIdentifier [tgid=" + tgid + ", fd=" + fd + "]";
+	public String toString(){
+		return "UnknownIdentifier [fd=" + fd + ", tgid=" + getGroupId() + ", tgidTime="
+				+ getGroupTime() + "]";
 	}
+	
 }

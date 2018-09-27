@@ -218,12 +218,10 @@ public class CommonFunctions {
     		logger.log(Level.WARNING, id + ": NULL external map");
     	}
     }
-
-    public static <X, Y extends Serializable> ExternalMemoryMap<X, Y> createExternalMemoryMapInstance(String id,
-    		String cacheSizeValue, String bloomfilterFalsePositiveProbValue, String bloomfilterExpectedElementsCountValue,
-    		String parentDBDirPathValue, String dbDirAndNameValue, String reportingIntervalSecondsValue,
-    		Hasher<X> hasher) throws Exception{
-
+    
+    public static boolean validateExternalMemoryArguments(String id, String cacheSizeValue, String bloomfilterFalsePositiveProbValue,
+    		String bloomfilterExpectedElementsCountValue, String parentDBDirPathValue, String dbDirAndNameValue,
+    		String reportingIntervalSecondsValue) throws Exception{
     	String exceptionPrefix = id + ": ExternalMemoryMap creation: ";
 
     	if(isNullOrEmpty(id)){
@@ -293,6 +291,44 @@ public class CommonFunctions {
     				"Invalid '"+File.separator+"' character in external DB name: "+dbDirAndNameValue+".");
     	}		
 
+    	// Check if can create dirs at the mentioned path
+    	
+    	try{
+    		String tempDirNameForAccessCheck = parentDBDirPathValue + "_" + System.nanoTime();
+    		if(!FileUtility.createDirectories(tempDirNameForAccessCheck)){
+    			throw new Exception("");
+    		}else{
+    			// Successfully created
+    			try{
+    				FileUtils.deleteQuietly(new File(tempDirNameForAccessCheck));
+    			}catch(Exception e){
+    				// ignore the exception if deletion fails
+    			}
+    		}
+    	}catch(Exception e){
+    		throw new Exception(exceptionPrefix + e.getMessage() + ". Failed to create dbs parent directory: " + parentDBDirPathValue);
+    	}
+
+    	return true;
+    }
+    
+    public static <X, Y extends Serializable> ExternalMemoryMap<X, Y> createExternalMemoryMapInstance(String id,
+    		String cacheSizeValue, String bloomfilterFalsePositiveProbValue, String bloomfilterExpectedElementsCountValue,
+    		String parentDBDirPathValue, String dbDirAndNameValue, String reportingIntervalSecondsValue,
+    		Hasher<X> hasher) throws Exception{
+
+    	String exceptionPrefix = id + ": ExternalMemoryMap creation: ";
+
+    	// Throws exception if some invalid argument
+    	validateExternalMemoryArguments(id, cacheSizeValue, bloomfilterFalsePositiveProbValue, 
+    			bloomfilterExpectedElementsCountValue, parentDBDirPathValue, dbDirAndNameValue, 
+    			reportingIntervalSecondsValue);
+    	
+    	Integer cacheSize = CommonFunctions.parseInt(cacheSizeValue, null);
+    	Double falsePositiveProb = CommonFunctions.parseDouble(bloomfilterFalsePositiveProbValue, null);
+    	Integer expectedNumberOfElements = CommonFunctions.parseInt(bloomfilterExpectedElementsCountValue, null);
+    	Long reporterInterval = CommonFunctions.parseLong(reportingIntervalSecondsValue, null); 
+    	
     	try{
     		if(!FileUtility.createDirectories(parentDBDirPathValue)){
     			throw new Exception("");

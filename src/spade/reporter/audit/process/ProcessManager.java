@@ -40,6 +40,7 @@ import spade.reporter.audit.AuditEventReader;
 import spade.reporter.audit.OPMConstants;
 import spade.reporter.audit.SYSCALL;
 import spade.reporter.audit.artifact.ArtifactIdentifier;
+import spade.reporter.audit.artifact.ArtifactManager;
 import spade.reporter.audit.artifact.BlockDeviceIdentifier;
 import spade.reporter.audit.artifact.CharacterDeviceIdentifier;
 import spade.reporter.audit.artifact.DirectoryIdentifier;
@@ -324,6 +325,21 @@ public abstract class ProcessManager extends ProcessStateManager{
 		ProcessKey key = activeProcesses.get(pid);
 		if(key != null){
 			return processUnitStates.get(key);
+		}else{
+			return null;
+		}
+	}
+	
+	/**
+	 * Returns the current time value (start or seen) being used for indexing the given pid
+	 * 
+	 * @param pid process id
+	 * @return time value or null if not found
+	 */
+	public String getStartOrSeenTimeForPid(String pid){
+		ProcessKey key = activeProcesses.get(pid);
+		if(key != null){
+			return key.time;
 		}else{
 			return null;
 		}
@@ -672,7 +688,8 @@ public abstract class ProcessManager extends ProcessStateManager{
 	 * @param outputOPM generate OPM only if true
 	 * @return true
 	 */
-	public boolean handleExit(Map<String, String> eventData, SYSCALL syscall, boolean outputOPM){
+	public boolean handleExit(Map<String, String> eventData, SYSCALL syscall, boolean outputOPM,
+			ArtifactManager artifactManager){
 		String pid = eventData.get(AuditEventReader.PID);
 		String time = eventData.get(AuditEventReader.TIME);
 		String eventId = eventData.get(AuditEventReader.EVENT_ID);
@@ -683,6 +700,10 @@ public abstract class ProcessManager extends ProcessStateManager{
 			WasTriggeredBy edge = new WasTriggeredBy(processVertex, processVertex);
 			reporter.putEdge(edge, reporter.getOperation(syscall), time, eventId, OPMConstants.SOURCE_AUDIT_SYSCALL);
 		}
+		
+		boolean groupExited = false;
+		String memTgid = getMemoryTgid(pid);
+		String fdTgid = getFdTgid(pid);
 		
 		ProcessKey activeKey = null;
 		ProcessUnitState state = null;
@@ -718,6 +739,7 @@ public abstract class ProcessManager extends ProcessStateManager{
 			if(activeKey != null){
 				processUnitStates.remove(activeKey);
 			}
+			groupExited = true;
 		}else if(syscall == SYSCALL.EXIT){
 			if(threadGroupsKeys != null){
 				threadGroupsKeys.remove(null);
@@ -728,15 +750,22 @@ public abstract class ProcessManager extends ProcessStateManager{
 				}
 			}
 			if(activeThreadGroups.get(threadGroupId) == null){
+				// Means that the whole group has exited
 				activeProcesses.remove(pid);
 				if(activeKey != null){
 					processUnitStates.remove(activeKey);
 				}
+				groupExited = true;
 			}else{
 				removeProcessUnitState(pid);
 			}
 		}else{
 			reporter.log(Level.WARNING, "Unexpected syscall in exit handler", null, time, eventId, syscall);
+		}
+		
+		if(groupExited){
+			artifactManager.doCleanUpForPid(memTgid);
+			artifactManager.doCleanUpForPid(fdTgid);
 		}
 		
 		return true;
@@ -955,7 +984,8 @@ public abstract class ProcessManager extends ProcessStateManager{
 								if(inodefd0.get(inode) == null){
 									inodefd0.put(inode, fdString);
 								}else{
-									ArtifactIdentifier pipeInfo = new UnnamedPipeIdentifier(pid, fdString, inodefd0.get(inode));
+									String pidTime = getStartOrSeenTimeForPid(pid);
+									ArtifactIdentifier pipeInfo = new UnnamedPipeIdentifier(pid, pidTime, fdString, inodefd0.get(inode));
 									fds.put(fdString, pipeInfo);
 									fds.put(inodefd0.get(inode), pipeInfo);
 									inodefd0.remove(inode);

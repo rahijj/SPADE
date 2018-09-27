@@ -856,8 +856,8 @@ public class Audit extends AbstractReporter {
 		if(success){
 			try{
 				artifactManager = new ArtifactManager(this, globals);
-			}catch(Exception e){
-				logger.log(Level.SEVERE, "Failed to instantiate artifact manager", e);
+			}catch(Throwable t){
+				logger.log(Level.SEVERE, "Failed to instantiate artifact manager", t);
 				success = false;
 			}
 		}
@@ -2106,7 +2106,8 @@ public class Audit extends AbstractReporter {
 	
 	private UnknownIdentifier addUnknownFd(String pid, String fd){
 		String fdTgid = processManager.getFdTgid(pid);
-		UnknownIdentifier unknown = new UnknownIdentifier(fdTgid, fd);
+		String fdTgidTime = processManager.getStartOrSeenTimeForPid(fdTgid);
+		UnknownIdentifier unknown = new UnknownIdentifier(fdTgid, fdTgidTime, fd);
 		unknown.setOpenedForRead(null);
 		artifactManager.artifactCreated(unknown);
 		processManager.setFd(pid, fd, unknown);
@@ -2153,9 +2154,10 @@ public class Audit extends AbstractReporter {
 		// exit(), and exit_group() receives the following message(s):
 		// - SYSCALL
 		// - EOE
-		processManager.handleExit(eventData, syscall, CONTROL);
+		
+		processManager.handleExit(eventData, syscall, CONTROL, artifactManager);
 	}
-
+	
 	private void handleMmap(Map<String, String> eventData, SYSCALL syscall){
 		// mmap() receive the following message(s):
 		// - MMAP
@@ -2184,7 +2186,8 @@ public class Audit extends AbstractReporter {
 		
 		Process process = processManager.handleProcessFromSyscall(eventData);		
 		String tgid = processManager.getMemoryTgid(pid);
-		ArtifactIdentifier memoryArtifactIdentifier = new MemoryIdentifier(tgid, address, length);
+		String tgidTime = processManager.getStartOrSeenTimeForPid(tgid);
+		ArtifactIdentifier memoryArtifactIdentifier = new MemoryIdentifier(tgid, tgidTime, address, length);
 		artifactManager.artifactVersioned(memoryArtifactIdentifier);
 		Artifact memoryArtifact = putArtifactFromSyscall(eventData, memoryArtifactIdentifier);
 		WasGeneratedBy wgbEdge = new WasGeneratedBy(memoryArtifact, process);
@@ -2237,8 +2240,9 @@ public class Audit extends AbstractReporter {
 		String protection = new BigInteger(eventData.get(AuditEventReader.ARG2)).toString(16);
 
 		String tgid = processManager.getMemoryTgid(pid);
+		String tgidTime = processManager.getStartOrSeenTimeForPid(tgid);
 		
-		ArtifactIdentifier memoryIdentifier = new MemoryIdentifier(tgid, address, length);
+		ArtifactIdentifier memoryIdentifier = new MemoryIdentifier(tgid, tgidTime, address, length);
 		artifactManager.artifactVersioned(memoryIdentifier);
 		Artifact memoryArtifact = putArtifactFromSyscall(eventData, memoryIdentifier);
 
@@ -2698,7 +2702,8 @@ public class Audit extends AbstractReporter {
 			String memoryAddress = new BigInteger(eventData.get(AuditEventReader.ARG0)).toString(16); //convert to hexadecimal
 			String memorySize = new BigInteger(eventData.get(AuditEventReader.ARG1)).toString(16); //convert to hexadecimal
 			String tgid = processManager.getMemoryTgid(pid);
-			moduleIdentifier = new MemoryIdentifier(tgid, memoryAddress, memorySize);
+			String tgidTime = processManager.getStartOrSeenTimeForPid(tgid);
+			moduleIdentifier = new MemoryIdentifier(tgid, tgidTime, memoryAddress, memorySize);
 		}else if(syscall == SYSCALL.FINIT_MODULE){
 			String fd = eventData.get(AuditEventReader.ARG0);
 			moduleIdentifier = processManager.getFd(pid, fd);
@@ -3206,6 +3211,7 @@ public class Audit extends AbstractReporter {
 		String domainString = eventData.get(AuditEventReader.ARG0);
 		String sockTypeString = eventData.get(AuditEventReader.ARG1);
 		String fdTgid = processManager.getFdTgid(pid);
+		String fdTgidTime = processManager.getStartOrSeenTimeForPid(fdTgid);
 		
 		int domain = CommonFunctions.parseInt(domainString, null); // Let exception be thrown
 		int sockType = CommonFunctions.parseInt(sockTypeString, null);
@@ -3215,9 +3221,9 @@ public class Audit extends AbstractReporter {
 		ArtifactIdentifier fdIdentifier = null;
 		
 		if(domain == AF_INET || domain == AF_INET6 || domain == PF_INET || domain == PF_INET6){
-			fdIdentifier = new UnnamedNetworkSocketPairIdentifier(fdTgid, fd0, fd1, protocol);
+			fdIdentifier = new UnnamedNetworkSocketPairIdentifier(fdTgid, fdTgidTime, fd0, fd1, protocol);
 		}else if(domain == AF_LOCAL || domain == AF_UNIX || domain == PF_LOCAL || domain == PF_UNIX){
-			fdIdentifier = new UnnamedUnixSocketPairIdentifier(fdTgid, fd0, fd1);
+			fdIdentifier = new UnnamedUnixSocketPairIdentifier(fdTgid, fdTgidTime, fd0, fd1);
 		}else{
 			// Unsupported domain
 		}
@@ -3237,10 +3243,11 @@ public class Audit extends AbstractReporter {
 		// - EOE
 		String pid = eventData.get(AuditEventReader.PID);
 		String fdTgid = processManager.getFdTgid(pid);
+		String fdTgidTime = processManager.getStartOrSeenTimeForPid(fdTgid);
 		String fd0 = eventData.get(AuditEventReader.FD0);
 		String fd1 = eventData.get(AuditEventReader.FD1);
-		ArtifactIdentifier readPipeIdentifier = new UnnamedPipeIdentifier(fdTgid, fd0, fd1);
-		ArtifactIdentifier writePipeIdentifier = new UnnamedPipeIdentifier(fdTgid, fd0, fd1);
+		ArtifactIdentifier readPipeIdentifier = new UnnamedPipeIdentifier(fdTgid, fdTgidTime, fd0, fd1);
+		ArtifactIdentifier writePipeIdentifier = new UnnamedPipeIdentifier(fdTgid, fdTgidTime, fd0, fd1);
 		processManager.setFd(pid, fd0, readPipeIdentifier, true);
 		processManager.setFd(pid, fd1, writePipeIdentifier, false);
 
