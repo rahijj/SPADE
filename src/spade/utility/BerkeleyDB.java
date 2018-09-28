@@ -49,7 +49,7 @@ public class BerkeleyDB<V extends Serializable> implements ExternalStore<V> {
 	
 	private String directoryPath;
 	
-	public BerkeleyDB(String directoryPath, String databaseName) throws Exception{
+	protected BerkeleyDB(String directoryPath, String databaseName) throws Exception{
 		this.directoryPath = directoryPath;
 		
 		EnvironmentConfig envConfig = new EnvironmentConfig();
@@ -119,7 +119,7 @@ public class BerkeleyDB<V extends Serializable> implements ExternalStore<V> {
 				}
 			}
 		}catch(Exception e){
-			throw new Exception(e.getMessage() + ". Path deletion failed: " + directoryPath);
+			throw new Exception(e.getMessage() + ". Path deletion failed: " + directoryPath, e);
 		}
 	}
 	
@@ -131,7 +131,7 @@ public class BerkeleyDB<V extends Serializable> implements ExternalStore<V> {
 				throw new Exception("Does not exist");
 			}
 		}catch(Exception e){
-			throw new Exception(e.getMessage() + ". Failed to get size for path: " + directoryPath);
+			throw new Exception(e.getMessage() + ". Failed to get size for path: " + directoryPath, e);
 		}
 	}
 

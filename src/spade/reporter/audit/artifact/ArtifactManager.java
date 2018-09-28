@@ -52,32 +52,36 @@ public class ArtifactManager{
 			CONFIG_KEY_PERSISTENT_BF_FP_PROB = "persistentbffpp",
 			CONFIG_KEY_PERSISTENT_BF_EXPECTED_ELEMENTS = "persistentbfexpectedelements",
 			CONFIG_KEY_PERSISTENT_REPORTING_INTERVAL_SECONDS = "persistentreportinginterval",
+			CONFIG_KEY_PERSISTENT_STORE_CLASS_NAME = "persistentdbstoreclassname",
 			
 //			CONFIG_KEY_TRANSIENT_SUB_DIR_PREFIX = "transientsubdirprefix",
 			CONFIG_KEY_TRANSIENT_DB_NAME_PREFIX = "transientdbnameprefix",
 			CONFIG_KEY_TRANSIENT_CACHE_SIZE = "transientcachesize",
 			CONFIG_KEY_TRANSIENT_BF_FP_PROB = "transientbffpp",
 			CONFIG_KEY_TRANSIENT_BF_EXPECTED_ELEMENTS = "transientbfexpectedelements",
-			CONFIG_KEY_TRANSIENT_REPORTING_INTERVAL_SECONDS = "transientreportinginterval";
+			CONFIG_KEY_TRANSIENT_REPORTING_INTERVAL_SECONDS = "transientreportinginterval",
+			CONFIG_KEY_TRANSIENT_STORE_CLASS_NAME = "transientdbstoreclassname";
 	
 	private static final String[] mandatoryConfigKeys = {CONFIG_KEY_PARENT_DIR, //CONFIG_KEY_PERSISTENT_SUB_DIR, 
 			CONFIG_KEY_PERSISTENT_DB_NAME, CONFIG_KEY_PERSISTENT_CACHE_SIZE, CONFIG_KEY_PERSISTENT_BF_FP_PROB,
 			CONFIG_KEY_PERSISTENT_BF_EXPECTED_ELEMENTS, CONFIG_KEY_PERSISTENT_BF_EXPECTED_ELEMENTS,
-			CONFIG_KEY_PERSISTENT_REPORTING_INTERVAL_SECONDS, //CONFIG_KEY_TRANSIENT_SUB_DIR_PREFIX, 
+			CONFIG_KEY_PERSISTENT_REPORTING_INTERVAL_SECONDS, CONFIG_KEY_PERSISTENT_STORE_CLASS_NAME,
+			//CONFIG_KEY_TRANSIENT_SUB_DIR_PREFIX, 
 			CONFIG_KEY_TRANSIENT_DB_NAME_PREFIX, CONFIG_KEY_TRANSIENT_CACHE_SIZE, CONFIG_KEY_TRANSIENT_BF_FP_PROB,
-			CONFIG_KEY_TRANSIENT_BF_EXPECTED_ELEMENTS, CONFIG_KEY_TRANSIENT_REPORTING_INTERVAL_SECONDS};
+			CONFIG_KEY_TRANSIENT_BF_EXPECTED_ELEMENTS, CONFIG_KEY_TRANSIENT_REPORTING_INTERVAL_SECONDS,
+			CONFIG_KEY_TRANSIENT_STORE_CLASS_NAME};
 	
 	private String configParentDir, 
 	
 			//configPersistentSubDir, 
 			configPersistentDbName, configPersistentCacheSize,
 			configPersistentBloomfilterFalsePositiveProb, configPersistentBloomfilterExpectedElements,
-			configPersistentReportingIntervalSeconds,
+			configPersistentReportingIntervalSeconds, configPersistentStoreClassName,
 			
 			//configTransientSubDirPrefix, 
 			configTransientDbNamePrefix, configTransientCacheSize, 
 			configTransientBloomfilterFalsePositiveProb, configTransientBloomfilterExpectedElements,
-			configTransientReportingIntervalSeconds;
+			configTransientReportingIntervalSeconds, configTransientStoreClassName;
 	
 	private final Hasher<ArtifactIdentifier> artifactIdentifierHasher = new Hasher<ArtifactIdentifier>(){
 		@Override
@@ -140,7 +144,7 @@ public class ArtifactManager{
 				configTransientCacheSize, configTransientBloomfilterFalsePositiveProb, 
 				configTransientBloomfilterExpectedElements, 
 				getTransientArtifactsMapSubDirPath(transientId), getTransientArtifactsMapDbName(transientId), 
-				configTransientReportingIntervalSeconds);
+				configTransientReportingIntervalSeconds, configTransientStoreClassName);
 	}
 	
 	private void initPeristentArtifactsMap() throws Exception{
@@ -148,7 +152,7 @@ public class ArtifactManager{
 		persistentArtifactsMap = CommonFunctions.createExternalMemoryMapInstance(persistentArtifactsMapId, 
 				configPersistentCacheSize, configPersistentBloomfilterFalsePositiveProb, 
 				configPersistentBloomfilterExpectedElements, dirPath,
-				configPersistentDbName, configPersistentReportingIntervalSeconds, 
+				configPersistentDbName, configPersistentReportingIntervalSeconds, configPersistentStoreClassName,
 				artifactIdentifierHasher
 		);
 	}
@@ -160,7 +164,7 @@ public class ArtifactManager{
 		return CommonFunctions.createExternalMemoryMapInstance(mapId, 
 				configTransientCacheSize, configTransientBloomfilterFalsePositiveProb, 
 				configTransientBloomfilterExpectedElements, dirPath,
-				dbName, configTransientReportingIntervalSeconds, 
+				dbName, configTransientReportingIntervalSeconds, configTransientStoreClassName,
 				artifactIdentifierHasher
 		);
 	}
@@ -183,6 +187,7 @@ public class ArtifactManager{
 		configPersistentBloomfilterFalsePositiveProb = configMap.get(CONFIG_KEY_PERSISTENT_BF_FP_PROB);
 		configPersistentBloomfilterExpectedElements = configMap.get(CONFIG_KEY_PERSISTENT_BF_EXPECTED_ELEMENTS);
 		configPersistentReportingIntervalSeconds = configMap.get(CONFIG_KEY_PERSISTENT_REPORTING_INTERVAL_SECONDS);
+		configPersistentStoreClassName = configMap.get(CONFIG_KEY_PERSISTENT_STORE_CLASS_NAME);
 		
 		//configTransientSubDirPrefix = configMap.get(CONFIG_KEY_TRANSIENT_SUB_DIR_PREFIX);
 		configTransientDbNamePrefix = configMap.get(CONFIG_KEY_TRANSIENT_DB_NAME_PREFIX);
@@ -190,6 +195,7 @@ public class ArtifactManager{
 		configTransientBloomfilterFalsePositiveProb = configMap.get(CONFIG_KEY_TRANSIENT_BF_FP_PROB);
 		configTransientBloomfilterExpectedElements = configMap.get(CONFIG_KEY_TRANSIENT_BF_EXPECTED_ELEMENTS);
 		configTransientReportingIntervalSeconds = configMap.get(CONFIG_KEY_TRANSIENT_REPORTING_INTERVAL_SECONDS);
+		configTransientStoreClassName = configMap.get(CONFIG_KEY_TRANSIENT_STORE_CLASS_NAME);
 		
 	}
 	

@@ -49,6 +49,7 @@ public class AuditSanity extends AbstractFilter{
 		try{
 			vertexMap = CommonFunctions.createExternalMemoryMapInstance(vertexMapId, "100000", "0.0001", "10000000", 
 					Settings.getProperty("spade_root") + File.separator + "tmp", "vertexhashes", "120", 
+					"BerkeleyDB",
 					new Hasher<AbstractVertex>(){
 						@Override
 						public String getHash(AbstractVertex t) {

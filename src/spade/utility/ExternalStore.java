@@ -70,4 +70,26 @@ public interface ExternalStore<V extends Serializable>{
 	 * Return size in bytes of data persisted
 	 */
 	public BigInteger sizeInBytesOfPersistedData() throws Exception;
+	
+	/**
+	 * Returns an instance of the requested external store. If unknown or null then null returned
+	 * 
+	 * Brittle API. Fix-it. TODO
+	 * 
+	 * @param storeClass
+	 * @param dbDirPath path to the directory for the db. *** MUST EXIST ***
+	 * @param dbName name of the db
+	 * @return instance of the external store requested.
+	 */
+	public static <X extends Serializable> ExternalStore<X> createInstance(Class<? extends ExternalStore<X>> storeClass,
+			String dbDirPath, String dbName) throws Throwable{
+		if(LevelDBStore.class.equals(storeClass)){
+			return new LevelDBStore<X>(dbDirPath, dbName);
+		}else if(BerkeleyDB.class.equals(storeClass)){
+			return new BerkeleyDB<X>(dbDirPath, dbName);
+		}else{
+			throw new Exception("Unexpected store class: " + storeClass);
+		}
+	}
+	
 }

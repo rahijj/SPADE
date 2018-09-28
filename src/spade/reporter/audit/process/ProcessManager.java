@@ -149,6 +149,7 @@ public abstract class ProcessManager extends ProcessStateManager{
 					configMap.get("cacheSize"), configMap.get("falsePositiveProb"), 
 					configMap.get("expectedElements"), configMap.get("dbParentDir"), 
 					configMap.get("dbName"), configMap.get("reportingIntervalSeconds"), 
+					configMap.get("dbStoreClassName"),
 					new Hasher<ProcessKey>(){
 						@Override
 						public String getHash(ProcessKey t){

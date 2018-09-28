@@ -88,6 +88,7 @@ public class CDM extends AbstractReporter{
 								CONFIG_KEY_CACHE_SIZE = "verticesCacheSize",
 								CONFIG_KEY_BLOOMFILTER_FALSE_PROBABILITY = "verticesBloomfilterFalsePositiveProbability",
 								CONFIG_KEY_BLOOMFILTER_EXPECTED_ELEMENTS = "verticesBloomFilterExpectedNumberOfElements",
+								CONFIG_KEY_STORE_CLASS_NAME = "dbStoreClassName",
 								CONFIG_KEY_SCHEMA = "Schema";
 	
 	public final static String KEY_CDM_TYPE = "cdm.type";
@@ -162,11 +163,12 @@ public class CDM extends AbstractReporter{
 	}
 	
 	private ExternalMemoryMap<String, AbstractVertex> initCacheMap(String tempDirPath, String verticesDatabaseName, String verticesCacheSize,
-			String verticesBloomfilterFalsePositiveProbability, String verticesBloomfilterExpectedNumberOfElements){
+			String verticesBloomfilterFalsePositiveProbability, String verticesBloomfilterExpectedNumberOfElements,
+			String storeClassNameValue){
 		try{
 			return CommonFunctions.createExternalMemoryMapInstance(uuidMapId, verticesCacheSize, 
 					verticesBloomfilterFalsePositiveProbability, verticesBloomfilterExpectedNumberOfElements, tempDirPath, 
-					verticesDatabaseName, null, new Hasher<String>(){
+					verticesDatabaseName, null, storeClassNameValue, new Hasher<String>(){
 						@Override
 						public String getHash(String t) {
 							return t;
@@ -315,7 +317,8 @@ public class CDM extends AbstractReporter{
 				uuidToVertexMap = initCacheMap(configMap.get(CONFIG_KEY_CACHE_DATABASE_PARENT_PATH), 
 						configMap.get(CONFIG_KEY_CACHE_DATABASE_NAME), configMap.get(CONFIG_KEY_CACHE_SIZE), 
 						configMap.get(CONFIG_KEY_BLOOMFILTER_FALSE_PROBABILITY), 
-						configMap.get(CONFIG_KEY_BLOOMFILTER_EXPECTED_ELEMENTS));
+						configMap.get(CONFIG_KEY_BLOOMFILTER_EXPECTED_ELEMENTS),
+						configMap.get(CONFIG_KEY_STORE_CLASS_NAME));
 				if(uuidToVertexMap == null){
 					logger.log(Level.SEVERE, "NULL external memory map");
 					return false;

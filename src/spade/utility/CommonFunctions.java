@@ -221,7 +221,7 @@ public class CommonFunctions {
     
     public static boolean validateExternalMemoryArguments(String id, String cacheSizeValue, String bloomfilterFalsePositiveProbValue,
     		String bloomfilterExpectedElementsCountValue, String parentDBDirPathValue, String dbDirAndNameValue,
-    		String reportingIntervalSecondsValue) throws Exception{
+    		String reportingIntervalSecondsValue, String storeClassNameValue) throws Exception{
     	String exceptionPrefix = id + ": ExternalMemoryMap creation: ";
 
     	if(isNullOrEmpty(id)){
@@ -247,6 +247,10 @@ public class CommonFunctions {
     	if(isNullOrEmpty(dbDirAndNameValue)){
     		throw new Exception(exceptionPrefix + 
     				"NULL/Empty external DB name: "+dbDirAndNameValue+".");
+    	}
+    	if(isNullOrEmpty(storeClassNameValue)){
+    		throw new Exception(exceptionPrefix + 
+    				"NULL/Empty external store class name: "+storeClassNameValue+".");
     	}
 
     	Integer cacheSize = CommonFunctions.parseInt(cacheSizeValue, null);
@@ -291,6 +295,14 @@ public class CommonFunctions {
     				"Invalid '"+File.separator+"' character in external DB name: "+dbDirAndNameValue+".");
     	}		
 
+    	try{
+    		Class<? extends ExternalStore> externalStoreClass = 
+    				(Class<? extends ExternalStore>)Class.forName("spade.utility."+storeClassNameValue); 
+    	}catch(Throwable t){
+    		throw new Exception(exceptionPrefix + 
+    				"No external store class found with name: " + storeClassNameValue, t);
+    	}
+    	
     	// Check if can create dirs at the mentioned path
     	
     	try{
@@ -306,7 +318,8 @@ public class CommonFunctions {
     			}
     		}
     	}catch(Exception e){
-    		throw new Exception(exceptionPrefix + e.getMessage() + ". Failed to create dbs parent directory: " + parentDBDirPathValue);
+    		throw new Exception(exceptionPrefix + e.getMessage() + 
+    				". Failed to create dbs parent directory: " + parentDBDirPathValue, e);
     	}
 
     	return true;
@@ -315,14 +328,14 @@ public class CommonFunctions {
     public static <X, Y extends Serializable> ExternalMemoryMap<X, Y> createExternalMemoryMapInstance(String id,
     		String cacheSizeValue, String bloomfilterFalsePositiveProbValue, String bloomfilterExpectedElementsCountValue,
     		String parentDBDirPathValue, String dbDirAndNameValue, String reportingIntervalSecondsValue,
-    		Hasher<X> hasher) throws Exception{
+    		String storeClassNameValue, Hasher<X> hasher) throws Exception{
 
     	String exceptionPrefix = id + ": ExternalMemoryMap creation: ";
 
     	// Throws exception if some invalid argument
     	validateExternalMemoryArguments(id, cacheSizeValue, bloomfilterFalsePositiveProbValue, 
     			bloomfilterExpectedElementsCountValue, parentDBDirPathValue, dbDirAndNameValue, 
-    			reportingIntervalSecondsValue);
+    			reportingIntervalSecondsValue, storeClassNameValue);
     	
     	Integer cacheSize = CommonFunctions.parseInt(cacheSizeValue, null);
     	Double falsePositiveProb = CommonFunctions.parseDouble(bloomfilterFalsePositiveProbValue, null);
@@ -334,7 +347,8 @@ public class CommonFunctions {
     			throw new Exception("");
     		}
     	}catch(Exception e){
-    		throw new Exception(exceptionPrefix + e.getMessage() + ". Failed to create dbs parent directory: " + parentDBDirPathValue);
+    		throw new Exception(exceptionPrefix + e.getMessage() + 
+    				". Failed to create dbs parent directory: " + parentDBDirPathValue, e);
     	}
 
     	dbDirAndNameValue += "_" + System.currentTimeMillis();
@@ -345,7 +359,7 @@ public class CommonFunctions {
     			throw new Exception("DB path already in use");
     		}
     	}catch(Exception e){
-    		throw new Exception(exceptionPrefix + e.getMessage() + ". Failed to check if db path exists: " + dbPath);
+    		throw new Exception(exceptionPrefix + e.getMessage() + ". Failed to check if db path exists: " + dbPath, e);
     	}
     	
     	try{
@@ -353,11 +367,21 @@ public class CommonFunctions {
     			throw new Exception("");
     		}
     	}catch(Exception e){
-    		throw new Exception(exceptionPrefix + e.getMessage() + ". Failed to create db directory: " + dbPath);
+    		throw new Exception(exceptionPrefix + e.getMessage() + ". Failed to create db directory: " + dbPath, e);
     	}
 
+    	Class<? extends ExternalStore<Y>> externalStoreClass = null;
+		try{
+    		externalStoreClass = 
+    				(Class<? extends ExternalStore<Y>>)Class.forName("spade.utility."+storeClassNameValue); 
+    	}catch(Throwable t){
+    		throw new Exception(exceptionPrefix + 
+    				"No external store class found with name: " + storeClassNameValue, t);
+    	}
+    	
     	try{
-    		ExternalStore<Y> db = new BerkeleyDB<Y>(dbPath, dbDirAndNameValue);
+    		
+    		ExternalStore<Y> db = ExternalStore.createInstance(externalStoreClass, dbPath, dbDirAndNameValue);
     		ExternalMemoryMap<X, Y> map = new ExternalMemoryMap<X, Y>(
     				id, cacheSize, db, falsePositiveProb, expectedNumberOfElements);
     		if(reporterInterval != null){
@@ -369,12 +393,12 @@ public class CommonFunctions {
     		}
     		logger.log(Level.INFO, id+": ExternalMemoryMap created with params: cache size={0}, "
     				+ "db path={1}, db name={2}, false positive prob={3}, expected number of elements={4}, "
-    				+ "reporting interval in millis={5}", new Object[]{
+    				+ "reporting interval in millis={5}, external store class name={6}", new Object[]{
     						cacheSize, dbPath, dbDirAndNameValue, falsePositiveProb, expectedNumberOfElements,
-    						reporterInterval
+    						reporterInterval, storeClassNameValue
     		});
     		return map;
-    	}catch(Exception e){
+    	}catch(Throwable e){
     		try{
     			if(FileUtility.doesPathExist(dbPath)){
     				FileUtility.deleteFile(dbPath);
@@ -382,7 +406,7 @@ public class CommonFunctions {
     		}catch(Exception e2){
     			
     		}
-    		throw new Exception(exceptionPrefix + "Exception: " + e.getMessage());
+    		throw new Exception(exceptionPrefix + "Exception: " + e.getMessage(), e);
     	}
     }
     
