@@ -218,10 +218,8 @@ public class Graphviz extends AbstractStorage {
                 }
                 if ("operation".equals(key)){
                     annotationString.append(key);
-                   // Logger.getLogger(Graphviz.class.getName()).log(Level.INFO, "Testing RAHIJ GILLANI key "+key);
                     annotationString.append(":");
                     annotationString.append(value);
-                   // Logger.getLogger(Graphviz.class.getName()).log(Level.INFO, "Testing RAHIJ GILLANI value "+value);
                     annotationString.append("\\n");
                 }
             }
@@ -298,7 +296,6 @@ public class Graphviz extends AbstractStorage {
             String srckey = Hex.encodeHexString(incomingEdge.getChildVertex().bigHashCodeBytes());
             String dstkey = Hex.encodeHexString(incomingEdge.getParentVertex().bigHashCodeBytes());
             if(!(rmList.contains(dstkey)) && !(rmList.contains(srckey))){
-                Logger.getLogger(Graphviz.class.getName()).log(Level.INFO, "Testing RAHIJ GILLANI "+srckey+"-------"+dstkey);
                 outputFile.write("\"" + srckey + "\" -> \"" + dstkey + "\" [label=\"" + edgeString.replace("\"", "'") + "\" color=\"" + color + "\" style=\"" + style + "\"];\n");
                 checkTransactions();                
             }
