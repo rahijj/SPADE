@@ -19,6 +19,7 @@
  */
 package spade.storage;
 
+import java.util.*;
 import java.io.FileWriter;
 import java.util.Map;
 import java.util.logging.Level;
@@ -36,12 +37,15 @@ import spade.reporter.audit.OPMConstants;
  *
  * @author Dawood Tariq
  */
+
 public class Graphviz extends AbstractStorage {
 
     private FileWriter outputFile;
     private final int TRANSACTION_LIMIT = 1000;
     private int transaction_count;
     private String filePath;
+    public String rmkey;
+    ArrayList<String> rmList=new ArrayList<String>();
 
     @Override
     public boolean initialize(String arguments) {
@@ -49,6 +53,7 @@ public class Graphviz extends AbstractStorage {
             if (arguments == null) {
                 return false;
             }
+            
 
             filePath = arguments;
             outputFile = new FileWriter(filePath, false);
@@ -88,10 +93,60 @@ public class Graphviz extends AbstractStorage {
                 if (key == null || value == null) {
                     continue;
                 }
-                annotationString.append(key);
-                annotationString.append(":");
-                annotationString.append(value);
-                annotationString.append("\\n");
+////////////////////////////FILTERS//////////////////////////////////////
+                //For Processes only diplays uid & name
+                String type = incomingVertex.getAnnotation("type");
+                if (type.equalsIgnoreCase("Process")) {
+
+                    if ("uid".equals(key) || "name".equals(key)){
+                        annotationString.append(key);
+                        annotationString.append(":");
+                        annotationString.append(value);
+                        //Logger.getLogger(Graphviz.class.getName()).log(Level.INFO, "Testing RAHIJ GILLANI "+value);
+                        annotationString.append("\\n");
+
+                    }
+                }
+                //For Artifacts,Entities or Objects checks if it has a subtyype 
+                //then displays remote address & remote port
+                else if (type.equalsIgnoreCase("Artifact")
+                    || type.equalsIgnoreCase("Entity")
+                    || type.equalsIgnoreCase("Object")) 
+                {
+                    try {
+                        String subtype = incomingVertex.getAnnotation(OPMConstants.ARTIFACT_SUBTYPE);
+                        String cdmType = incomingVertex.getAnnotation("cdm.type");
+                        if (OPMConstants.SUBTYPE_NETWORK_SOCKET.equalsIgnoreCase(subtype)
+                                || "NetFlowObject".equalsIgnoreCase(cdmType)) {
+                            if("remote address".equals(key) || "remote port".equals(key)){                       
+                                annotationString.append(key);
+                                annotationString.append(":");
+                                annotationString.append(value);
+                                annotationString.append("\\n");
+                            }
+                            
+                        }
+                        //Else only displays the following info about Artifacts:
+
+                        else if(type.equalsIgnoreCase("Artifact")){
+                            if("path".equals(key) || "subtype".equals(key) || "tgid".equals(key)|| "write fd".equals(key)
+                                || "read fd".equals(key)){
+                                annotationString.append(key);
+                                annotationString.append(":");
+                                annotationString.append(value);
+                                annotationString.append("\\n");    
+                            }
+                        }
+                    } catch (Exception exception) {
+                        //ignore
+                    }           
+                }
+                else {
+                    annotationString.append(key);
+                    annotationString.append(":");
+                    annotationString.append(value);
+                    annotationString.append("\\n");
+                }
             }
             String vertexString = annotationString.substring(0, annotationString.length() - 2);
             String shape = "box";
@@ -125,8 +180,19 @@ public class Graphviz extends AbstractStorage {
             }
 
             String key = Hex.encodeHexString(incomingVertex.bigHashCodeBytes());
-            outputFile.write("\"" + key + "\" [label=\"" + vertexString.replace("\"", "'") + "\" shape=\"" + shape + "\" fillcolor=\"" + color + "\"];\n");
-            checkTransactions();
+            //FILTERS out objects with /stat,/proc,/cgroup,dbus-daemon & polkitd in them.
+            if ( vertexString.replace("\"", "'").indexOf("/stat") == -1 && vertexString.replace("\"", "'").indexOf("/cgroup") == -1
+                && vertexString.replace("\"", "'").indexOf("/proc") == -1 && vertexString.replace("\"", "'").indexOf("dbus-daemon") == -1
+                && vertexString.replace("\"", "'").indexOf("polkitd") == -1) {
+
+                
+                outputFile.write("\"" + key + "\" [label=\"" + vertexString.replace("\"", "'") + "\" shape=\"" + shape + "\" fillcolor=\"" + color + "\"];\n");
+                checkTransactions();
+
+            }
+            else{
+                rmList.add(key);
+            }
             return true;
         } catch (Exception exception) {
             Logger.getLogger(Graphviz.class.getName()).log(Level.SEVERE, null, exception);
@@ -150,10 +216,14 @@ public class Graphviz extends AbstractStorage {
                 if (key == null || value == null) {
                     continue;
                 }
-                annotationString.append(key);
-                annotationString.append(":");
-                annotationString.append(value);
-                annotationString.append("\\n");
+                if ("operation".equals(key)){
+                    annotationString.append(key);
+                   // Logger.getLogger(Graphviz.class.getName()).log(Level.INFO, "Testing RAHIJ GILLANI key "+key);
+                    annotationString.append(":");
+                    annotationString.append(value);
+                   // Logger.getLogger(Graphviz.class.getName()).log(Level.INFO, "Testing RAHIJ GILLANI value "+value);
+                    annotationString.append("\\n");
+                }
             }
             String color = "black";
             String type = incomingEdge.getAnnotation("type");
@@ -227,9 +297,12 @@ public class Graphviz extends AbstractStorage {
 
             String srckey = Hex.encodeHexString(incomingEdge.getChildVertex().bigHashCodeBytes());
             String dstkey = Hex.encodeHexString(incomingEdge.getParentVertex().bigHashCodeBytes());
+            if(!(rmList.contains(dstkey)) && !(rmList.contains(srckey))){
+                Logger.getLogger(Graphviz.class.getName()).log(Level.INFO, "Testing RAHIJ GILLANI "+srckey+"-------"+dstkey);
+                outputFile.write("\"" + srckey + "\" -> \"" + dstkey + "\" [label=\"" + edgeString.replace("\"", "'") + "\" color=\"" + color + "\" style=\"" + style + "\"];\n");
+                checkTransactions();                
+            }
 
-            outputFile.write("\"" + srckey + "\" -> \"" + dstkey + "\" [label=\"" + edgeString.replace("\"", "'") + "\" color=\"" + color + "\" style=\"" + style + "\"];\n");
-            checkTransactions();
             return true;
         } catch (Exception exception) {
             Logger.getLogger(Graphviz.class.getName()).log(Level.SEVERE, null, exception);
